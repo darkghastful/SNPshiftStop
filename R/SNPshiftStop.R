@@ -2,86 +2,109 @@
 # if aa.mut.pos not porvided results may not be accurate
 # if ref aa not porvided results may not be accurate
 # if alt aa not porvided results may not be accurate
-
+#' SNPshiftStop
+#'
 #' @importFrom magrittr %>%
 #' @importFrom stringr str_split str_length str_remove
 #' @importFrom Biostrings translate DNAString
-#' @importFrom bqutils content.from.endpoint
-#' SNPshiftStop
+#' @importFrom bqutils content.from.endpoint subset.object
 #'
 #' @param gene.symbol Gene symbol with frameshift mutation
 #' @param taxon provide taxon character string or number; found using NCBI (default human (9606))
-#' @param mutation.from.start Location of mutation relative to start
+#' @param mutation.from.start Location of mutation relative to start or
 #' @param ref.bp reference base pair (default is '"-"')
 #' @param alt.bp alternate base pair (default is '"-"')
 #' @param ref.aa reference amino acid (default is NA)
 #' @param alt.aa alternate amino acid (default is NA)
 #' @param aa.mut.pos amino acid mutation position (default is NA)
 #' @param start.loss does this mutation contain a start.loss (default is TRUE)
+#' @param ncbi.api.key ncbi api key from account (not needed to run)
 #'
-#' @return (gene.symbol, aa.seq, mutated.aa.seq, shortened.of.total.aa, dna.seq, mutated.dna.seq)
+#' @return (gene.symbol, aa.seq, alternate.aa.seq, shortened.of.total.aa, dna.seq, alternate.dna.seq)
 #' @export
 #'
 #' @examples
-#' \donttest{
-#' SNPshiftStop(gene.symbol="CFTR", taxon="human", mutation.from.start=1213, ref.bp="T", ref.aa="F", alt.aa="L", aa.mut.pos=405)
-#' }
-SNPshiftStop <- function(ncbi.api.key=Sys.getenv("ncbi.api.key"), gene.symbol, taxon="human", mutation.from.start, ref.bp="-", alt.bp="-", ref.aa=NA, alt.aa=NA, aa.mut.pos=NA, start.loss=FALSE){
-
-  # Stop conditions
-  if(!nzchar(ncbi.api.key)){
-    stop("Please provide ncbi.api.key")
+#' SNPshiftStop(gene.symbol="CFTR", taxon="human", mutation.from.start=1213,
+#' ref.bp="T", ref.aa="F", alt.aa="L", aa.mut.pos=405)
+SNPshiftStop <- function(gene.symbol, taxon="human", mutation.from.start=NA, ref.bp="-", alt.bp="-", ref.aa=NA, alt.aa=NA, aa.mut.pos=NA, start.loss=FALSE, ncbi.api.key=NULL){
+  if(is(gene.symbol, "data.frame")){
+    mutation <- gene.symbol
+    gene.symbol <- mutation$gene
+  }else{
+    mutation <- NULL
   }
 
-  if((ref.bp=="-" & alt.bp=="-")){
-    stop("Please provide either ref.bp or alt.bp.")
+  if(is.null(mutation)){
+    # ref.bp="-", alt.bp="-", ref.aa=NA, alt.aa=NA, aa.mut.pos=NA, start.loss=FALSE,
+
+    if((ref.bp=="-" & alt.bp=="-")){
+      stop("Please provide either ref.bp or alt.bp.")
+    }
+
+    # Warning conditions
+
+    if(is.na(ref.aa) | is.na(alt.aa) | is.na(aa.mut.pos)){
+      if(is.na(ref.aa) | is.na(aa.mut.pos)){
+        warning("The reference amino acid can not be checked against the sequence pulled from NCBI.")
+      }else if(is.na(alt.aa) | is.na(aa.mut.pos)){
+        warning("The alternate amino acid can not be checked against the generated mutant protein.")
+      }
+
+      if(is.na(ref.aa)){
+        warning("To ensure accuracy please provide the reference amino acid (ref.aa).")
+      }
+      if(is.na(alt.aa)){
+        warning("To ensure accuracy please provide the alternate amino acid (alt.aa).")
+      }
+      if(is.na(aa.mut.pos)){
+        warning("To ensure accuracy please provide the location of the amino acid mutation (aa.mut.pos).")
+      }
+    }
+
+    if(ref.bp=="-"){
+      ref.bp <- NA
+      ins.del <- "insertion"
+      ref.alt.bp <- alt.bp
+    }else if(alt.bp=="-"){
+      alt.bp <- NA
+      ins.del <- "deletion"
+      ref.alt.bp <- ref.bp
+    }
+
+  }else{
+    # mutation.from.start <- mutation[,"hgvs"]
+    hgvs <- str_split(mutation[,"hgvs"], ":c.")[[1]][2]
+    hgvs <- str_split(sub("^([0-9]+)_([0-9]+)([A-Za-z=]+)$", "\\1_\\2_\\3", hgvs), "_")[[1]]
+    mutation.from.start <- as.numeric(hgvs[1]):as.numeric(hgvs[2])
   }
 
-  # Warning conditions
 
-  if(is.na(ref.aa) | is.na(alt.aa) | is.na(aa.mut.pos)){
-    if(is.na(ref.aa) | is.na(aa.mut.pos)){
-      warning("The reference amino acid can not be checked against the sequence pulled from NCBI.")
-    }else if(is.na(alt.aa) | is.na(aa.mut.pos)){
-      warning("The alternate amino acid can not be checked against the generated mutant protein.")
-    }
-
-    if(is.na(ref.aa)){
-      warning("To ensure accuracy please provide the reference amino acid (ref.aa).")
-    }
-    if(is.na(alt.aa)){
-      warning("To ensure accuracy please provide the alternate amino acid (alt.aa).")
-    }
-    if(is.na(aa.mut.pos)){
-      warning("To ensure accuracy please provide the location of the amino acid mutation (aa.mut.pos).")
-    }
+  if(!is.null(ncbi.api.key)){
+    ncbi.api.key.string <- c(paste0("?api_key=", ncbi.api.key), paste0("&api_key=", ncbi.api.key))
+  }else{
+    ncbi.api.key.string <- c("", "")
   }
 
-
-
-  if(ref.bp=="-"){
-    ref.bp <- NA
-    ins.del <- "insertion"
-    ref.alt.bp <- alt.bp
-  }else if(alt.bp=="-"){
-    alt.bp <- NA
-    ins.del <- "deletion"
-    ref.alt.bp <- ref.bp
-  }
-
-  ##### Pull gene info
-  url <- paste0("https://api.ncbi.nlm.nih.gov/datasets/v2/gene/symbol/", gene.symbol, "/taxon/", taxon, "?api_key=", ncbi.api.key)
-  gene.info <- bqutils::content.from.endpoint(url, content_type="")$reports[1,1]
+  # ##### Pull gene info
+  # url <- paste0("https://api.ncbi.nlm.nih.gov/datasets/v2/gene/symbol/", gene.symbol, "/taxon/", taxon, ncbi.api.key.string[1])
+  # gene.info <- bqutils::content.from.endpoint(url, content_type="")$reports[1,1]
 
   ######################## Ensure that the provided position and bp mutation are consistant with the sequence from entrez
 
-  ##### Pull protein coding information from the product report of the NCBI page for the gene symbol
-  url <- paste0("https://api.ncbi.nlm.nih.gov/datasets/v2/gene/symbol/", gene.symbol, "/taxon/", taxon, "/product_report?types=PROTEIN_CODING&api_key=", ncbi.api.key)
-  proteins <- bqutils::content.from.endpoint(url, content_type="")$reports[1,1]
 
-  # Identify the protein of interest (based on MANE column)
-  protein <- proteins[,"transcripts"][[1]] %>%
-    .[!is.na(.[,"select_category"]),] # Matched ensemble dna and protein sequence
+  ##### Pull protein coding information from the product report of the NCBI page for the gene symbol
+  url <- paste0("https://api.ncbi.nlm.nih.gov/datasets/v2/gene/symbol/", gene.symbol, "/taxon/", taxon, "/product_report?types=PROTEIN_CODING", ncbi.api.key.string[2])
+  proteins <- content.from.endpoint(url, content_type="")$reports[1,1]
+
+  protein <- proteins[,"transcripts"][[1]]
+  if(is.null(mutation)){
+    # Identify the protein of interest (based on MANE column)
+    protein <- protein %>%
+      .[!is.na(.[,"select_category"]),] # Matched ensemble dna and protein sequence
+  }else{
+    protein <- protein[which(proteins[,"transcripts"][[1]]$protein$accession_version==mutation[, "ref.pro"]),]
+  }
+
 
   protein.aa.length <- protein[,"protein"][,"length"]
 
@@ -110,6 +133,9 @@ SNPshiftStop <- function(ncbi.api.key=Sys.getenv("ncbi.api.key"), gene.symbol, t
       .[.[,"name"]=="transcript variant 3", "accession_version"]
   }
 
+  if(!is.null(mutation)){
+    protein.dna.accession <- str_split(mutation[,"hgvs"], ":c.")[[1]][1]
+  }
 
   # DNA
   ##### Pull dna seq from accession
@@ -182,7 +208,7 @@ SNPshiftStop <- function(ncbi.api.key=Sys.getenv("ncbi.api.key"), gene.symbol, t
 
   # Analyze the mutated sequence
   ####################
-  # if(ceiling(mutation.from.start/3)!=aa.mut.pos){
+  # if(ceiling(mutation/3)!=aa.mut.pos){
   #   warning("The provided mutation location from the start of the coding region does not match the provided location for the aa mutation.")
   # }
 
@@ -197,11 +223,11 @@ SNPshiftStop <- function(ncbi.api.key=Sys.getenv("ncbi.api.key"), gene.symbol, t
   }
 
   # Add check to see if the mutation is actually a frameshift
-  if(!is.na(ref.bp)){
+  if(!is.na(ref.bp)&is.null(mutation)){
     if(length(str_split(ref.bp, "")[[1]])%%3==0){
       warning("The provided mutation is not a proper frameshift. The deletion is contains full codons.")
     }
-  }else if(!is.na(alt.bp)){
+  }else if(!is.na(alt.bp)&is.null(mutation)){
     if(length(str_split(alt.bp, "")[[1]])%%3==0){
       warning("The provided mutation is not a proper frameshift. The insertion is contains full codons.")
     }
@@ -214,13 +240,15 @@ SNPshiftStop <- function(ncbi.api.key=Sys.getenv("ncbi.api.key"), gene.symbol, t
   # str_split(mutated.aa.seq, "")[[1]][aa.mut.pos]
 
 
-  if(ins.del=="deletion"|ins.del=="del"){
+
+
+  if((ins.del=="deletion"|ins.del=="del")&is.null(mutation)){
     if(ref.bp!=paste0(str_split(coding.seq, "")[[1]][mutation.from.start], collapse="")&!start.loss){
       stop(paste0("The deleted base pair (at the provided muation site) does not match the reference base pair in the sequence aquired from NCBI.",
                   " Provided:", ref.bp, " NCBI:", paste0(str_split(coding.seq, "")[[1]][mutation.from.start], collapse="")))
       # stop()
     }
-  }else if(ins.del=="insertion"|ins.del=="ins"){
+  }else if((ins.del=="insertion"|ins.del=="ins")&is.null(mutation)){
     if(alt.bp!=paste0(str_split(mutated.dna.seq, "")[[1]][mutation.from.start], collapse="")&!start.loss){
       stop(paste0("The inserted base pair at the provided muation site does not match the alternate base pair in the sequence aquired from NCBI.",
                   " Provided:", alt.bp, " NCBI:", paste0(str_split(mutated.dna.seq, "")[[1]][mutation.from.start], collapse="")))
@@ -248,12 +276,33 @@ SNPshiftStop <- function(ncbi.api.key=Sys.getenv("ncbi.api.key"), gene.symbol, t
   missing.aa <- protein.aa.length-(mutated.protein.length+1)
   shortened.of.total.aa <- paste0(mutated.protein.length+1, "/", protein.aa.length)
 
+  if(!is.null(mutation)){
+    if(hgvs[3]=="ins"){
+      ref.alt.bp <- paste0(str_split(mutated.dna.seq, "")[[1]][mutation.from.start], collapse="")
+    }else if(hgvs[3]=="del"){
+      ref.alt.bp <- paste0(str_split(coding.seq, "")[[1]][mutation.from.start], collapse="")
+    }
+  }
+
+  if(is.na(aa.mut.pos)){
+    translated.aa.split <- str_split(translated.aa.seq, "")[[1]]
+    mutated.aa.split <- str_split(mutated.aa.seq, "")[[1]]
+    for(aa.pos in 1:length(translated.aa.split)){
+      if(translated.aa.split[aa.pos]!=mutated.aa.split[aa.pos]){
+        aa.mut.pos <- aa.pos
+        ref.aa <- translated.aa.split[aa.pos]
+        alt.aa <- mutated.aa.split[aa.pos]
+        break
+      }
+    }
+  }
+
   # print(aa.seq)
   # print(mutated.aa.seq)
   # print(gene.symbol)
   # print(ref.alt.bp)
   # print(ins.del)
-  # print(mutation.from.start)
+  # print(mutation)
   # print(aa.mut.pos)
   # print(str_split(aa.seq, "")[[1]][aa.mut.pos])
   # print(paste0(str_split(mutated.aa.seq, "")[[1]][aa.mut.pos]))
@@ -267,7 +316,7 @@ SNPshiftStop <- function(ncbi.api.key=Sys.getenv("ncbi.api.key"), gene.symbol, t
   ))
   # cat(paste("\nThe frameshift introduced a premature stop at position", shortened.of.total.aa, "(shortening the protein by", missing.aa, "amino acids)"))
 
-  return(list(gene.symbol=gene.symbol, aa.seq=aa.seq, mutated.aa.seq=mutated.aa.seq, shortened.of.total.aa=shortened.of.total.aa, dna.seq=dna.seq, mutated.dna.seq=mutated.dna.seq))
+  return(list(gene.symbol=gene.symbol, aa.seq=aa.seq, alternate.aa.seq=mutated.aa.seq, shortened.of.total.aa=shortened.of.total.aa, dna.seq=dna.seq, alternate.dna.seq=mutated.dna.seq))
 }
 
 
