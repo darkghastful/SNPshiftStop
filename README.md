@@ -1,7 +1,7 @@
 
 ## **SNPshiftStop**
 
-# Uses details for a single nucleotide polymorphisms (SNPs) and NCBI API queries to identify the premature stop within the encoded protein, sequences of the reference/altered DNA, and sequences of the reference/altered proteins.
+### Uses details for a single nucleotide polymorphisms (SNPs) and NCBI API queries to identify the premature stop within the encoded protein, sequences of the reference/altered DNA, and sequences of the reference/altered proteins.
 
 Whole genome sequencing (WGS) is a process to identify single nucleotide
 polymorphisms (SNPs) or base pair differences in the DNA of an
