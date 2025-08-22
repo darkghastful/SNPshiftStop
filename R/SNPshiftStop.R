@@ -5,7 +5,7 @@
 #' SNPshiftStop
 #'
 #' @importFrom magrittr %>%
-#' @importFrom stringr str_split str_length str_remove
+#' @importFrom stringr str_split str_length str_remove str_detect
 #' @importFrom Biostrings translate DNAString
 #' @importFrom bqutils content.from.endpoint subset.object
 #'
@@ -74,8 +74,22 @@ SNPshiftStop <- function(gene.symbol, taxon="human", mutation.from.start=NA, ref
   }else{
     # mutation.from.start <- mutation[,"hgvs"]
     hgvs <- str_split(mutation[,"hgvs"], ":c.")[[1]][2]
-    hgvs <- str_split(sub("^([0-9]+)_([0-9]+)([A-Za-z=]+)$", "\\1_\\2_\\3", hgvs), "_")[[1]]
-    mutation.from.start <- as.numeric(hgvs[1]):as.numeric(hgvs[2])
+
+    if(str_detect(hgvs, "_")){
+      hgvs <- str_split(sub("^([0-9]+)_([0-9]+)([A-Za-z=]+)$", "\\1_\\2_\\3", hgvs), "_")[[1]]
+      mutation.from.start <- as.numeric(hgvs[1]):as.numeric(hgvs[2])
+    }else{
+      hgvs <- str_split(sub("^([0-9]+)([A-Za-z=]+)$", "\\1_\\2", hgvs), "_")[[1]]
+      mutation.from.start <- as.numeric(hgvs[1])
+    }
+    if(hgvs[[length(hgvs)]]=="dup"){
+      hgvs[[length(hgvs)]] <- "ins"
+    }
+    ins.del <- hgvs[[length(hgvs)]]
+
+    if(ins.del=="ins"){
+      alt.bp <- str_remove(mutation[,"alt.bp"], mutation[,"ref.bp"])
+    }
   }
 
 
@@ -277,9 +291,9 @@ SNPshiftStop <- function(gene.symbol, taxon="human", mutation.from.start=NA, ref
   shortened.of.total.aa <- paste0(mutated.protein.length+1, "/", protein.aa.length)
 
   if(!is.null(mutation)){
-    if(hgvs[3]=="ins"){
+    if(hgvs[length(hgvs)]=="ins"){
       ref.alt.bp <- paste0(str_split(mutated.dna.seq, "")[[1]][mutation.from.start], collapse="")
-    }else if(hgvs[3]=="del"){
+    }else if(hgvs[length(hgvs)]=="del"){
       ref.alt.bp <- paste0(str_split(coding.seq, "")[[1]][mutation.from.start], collapse="")
     }
   }
@@ -307,12 +321,26 @@ SNPshiftStop <- function(gene.symbol, taxon="human", mutation.from.start=NA, ref
   # print(str_split(aa.seq, "")[[1]][aa.mut.pos])
   # print(paste0(str_split(mutated.aa.seq, "")[[1]][aa.mut.pos]))
 
+  if(length(mutation.from.start)>1){
+    mut.pos.str <- paste("from postion", min(mutation.from.start), "to", max(mutation.from.start))
+  }else{
+    mut.pos.str <- paste("at position", mutation.from.start)
+  }
+
+  if(str_split(ref.alt.bp, "")[[1]][1]=="A"){
+    a.an <- "an"
+  }else{
+    a.an <- "a"
+  }
+
   cat(paste(
-    "\n\033[1mReference:\033[22m\n", aa.seq,
-    "\n\033[1mAlternate:\033[22m\n", mutated.aa.seq,
-    "\n\n\033[1mIn the gene", gene.symbol, "there was an", ref.alt.bp, ins.del, "at position", paste0(mutation.from.start, "."),
-    "The frameshift began at", aa.mut.pos, "with a change of", str_split(aa.seq, "")[[1]][aa.mut.pos], "to", paste0(str_split(mutated.aa.seq, "")[[1]][aa.mut.pos], "."),
-    "This introduced a premature stop at position", shortened.of.total.aa, "(shortening the protein by", missing.aa, "amino acids).\033[22m\n\n"
+    paste0("Reference:\n", seq.split(aa.seq)),
+    paste0("\n\nAlternate:\n", seq.split(mutated.aa.seq)),
+    "\n\nIn the gene", gene.symbol, "there was", a.an, ref.alt.bp, ins.del, paste0(mut.pos.str, "."),
+    "\nThe frameshift began at", aa.mut.pos, "with a change of", str_split(aa.seq, "")[[1]][aa.mut.pos], "to", paste0(str_split(mutated.aa.seq, "")[[1]][aa.mut.pos], "."),
+    "\nThis introduced a premature stop at position", shortened.of.total.aa,
+    "\n(shortening the protein by", missing.aa, "amino acids).",
+    "\n\n"
   ))
   # cat(paste("\nThe frameshift introduced a premature stop at position", shortened.of.total.aa, "(shortening the protein by", missing.aa, "amino acids)"))
 

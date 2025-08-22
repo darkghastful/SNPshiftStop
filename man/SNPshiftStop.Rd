@@ -22,6 +22,8 @@ SNPshiftStop(
 
 \item{taxon}{provide taxon character string or number; found using NCBI (default human (9606))}
 
+\item{mutation.from.start}{Location of mutation relative to start or}
+
 \item{ref.bp}{reference base pair (default is '"-"')}
 
 \item{alt.bp}{alternate base pair (default is '"-"')}
@@ -34,15 +36,15 @@ SNPshiftStop(
 
 \item{start.loss}{does this mutation contain a start.loss (default is TRUE)}
 
-\item{mutation}{Location of mutation relative to start or}
+\item{ncbi.api.key}{ncbi api key from account (not needed to run)}
 }
 \value{
-(gene.symbol, aa.seq, mutated.aa.seq, shortened.of.total.aa, dna.seq, mutated.dna.seq)
+(gene.symbol, aa.seq, alternate.aa.seq, shortened.of.total.aa, dna.seq, alternate.dna.seq)
 }
 \description{
 SNPshiftStop
 }
 \examples{
-SNPshiftStop(gene.symbol="CFTR", taxon="human", mutation=1213,
+SNPshiftStop(gene.symbol="CFTR", taxon="human", mutation.from.start=1213,
 ref.bp="T", ref.aa="F", alt.aa="L", aa.mut.pos=405)
 }
