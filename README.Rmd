@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 
 
 ## **SNPshiftStop**
-### Uses details for a single nucleotide polymorphisms (SNPs) and NCBI API queries to identify the premature stop within the encoded protein, sequences of the reference/altered DNA, and sequences of the reference/altered proteins.
+<!-- Uses details for a single nucleotide polymorphisms (SNPs) and NCBI API queries to identify the premature stop within the encoded protein, sequences of the reference/altered DNA, and sequences of the reference/altered proteins. -->
 
 Whole genome sequencing (WGS) is a process to identify single nucleotide polymorphisms (SNPs) or base pair differences in the DNA of an individual. Certain SNPs, single or double insertions/deletions within the exon of a protein coding sequence cause a frameshift. This is because three base pairs encode for a single amino acid, the insertion/deletion of base pairs will cause the three base pairs encoding for each amino acid to be altered downstream. The resulting protein is likely to be shortened and malformed which can be associated with disease or disease resistance. Notable examples of this are BRCA1/BRCA2 and CCR5. [Hereditary Breast and Ovarian Cancer](https://www.ncbi.nlm.nih.gov/books/NBK1247) is associated with mutations of the BRCA1 or BRCA2 gene resulting in increased risk of cancer. While a 32 base pair mutation in the CCR5 gene is associated with a resistance to HIV. Both of these are due to shortened disfunctional proteins. Knowledge of the exact location of the frameshift and the altered downstream sequence of a protein is crucial to understand how much functionality a protein will retain.
 
