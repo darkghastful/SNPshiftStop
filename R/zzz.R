@@ -1,7 +1,7 @@
 utils::globalVariables(c("."))
 
 #' @noRd
-seq.split <- function(str, space=50){
+seq.split <- function(str, space=70){
   split <- str_split(str, "")[[1]]
   char <- 0
   out.str <- ""
