@@ -1,5 +1,5 @@
 
-## **SNPshiftStop**
+# **[SNPshiftStop](https://github.com/darkghastful/SNPshiftStop)**
 
 <!-- Uses details for a single nucleotide polymorphisms (SNPs) and NCBI API queries to identify the premature stop within the encoded protein, sequences of the reference/altered DNA, and sequences of the reference/altered proteins. -->
 
@@ -15,8 +15,10 @@ with disease or disease resistance. Notable examples of this are
 BRCA1/BRCA2 and CCR5. [Hereditary Breast and Ovarian
 Cancer](https://www.ncbi.nlm.nih.gov/books/NBK1247) is associated with
 mutations of the BRCA1 or BRCA2 gene resulting in increased risk of
-cancer. While a 32 base pair mutation in the CCR5 gene is associated
-with a resistance to HIV. Both of these are due to shortened
+cancer. While a [32 base pair
+deletion](https://www.science.org/doi/abs/10.1126/science.273.5283.1856)
+in the [CCR5](https://www.nature.com/articles/381667a0) gene is
+associated with a resistance to HIV. Both of these are due to shortened
 disfunctional proteins. Knowledge of the exact location of the
 frameshift and the altered downstream sequence of a protein is crucial
 to understand how much functionality a protein will retain.
